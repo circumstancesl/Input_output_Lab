@@ -19,7 +19,8 @@ public class TextFile
         Content = File.ReadAllText(filePath);
     }
 
-    public void Save(string filePath)
+    // Сериализация XML
+    public void XMLSave(string filePath)
     {
         using (var Writer = new StreamWriter(filePath))
         {
@@ -28,12 +29,37 @@ public class TextFile
         }
     }
 
-    public static TextFile Load(string filePath)
+    // Десериализация XML
+    public static TextFile XMLLoad(string filePath)
     {
         using (var Reader = new StreamReader(filePath))
         {
             var Serializer = new XmlSerializer(typeof(TextFile));
             return (TextFile)Serializer.Deserialize(Reader);
+        }
+    }
+
+    // Бинарная сериализация
+    public void BinarySave(string filePath)
+    {
+        using (var Writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
+        {
+            Writer.Write(FilePath);
+            Writer.Write(Content);
+        }
+    }
+
+    // бинарная десериализация 
+    public static TextFile BinaryLoad(string filePath)
+    {
+        using (var Reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+        {
+            var TextFile = new TextFile
+            {
+                FilePath = Reader.ReadString(),
+                Content = Reader.ReadString()
+            };
+            return TextFile;
         }
     }
 }
