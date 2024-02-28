@@ -19,47 +19,41 @@ public class TextFile
         Content = File.ReadAllText(filePath);
     }
 
-    // Сериализация XML
-    public void XMLSave(string filePath)
+    public void Save(string filePath, bool useBinarySerialization)
     {
-        using (var Writer = new StreamWriter(filePath))
+        if (useBinarySerialization)
         {
-            var Serializer = new XmlSerializer(typeof(TextFile));
-            Serializer.Serialize(Writer, this);
-        }
-    }
-
-    // Десериализация XML
-    public static TextFile XMLLoad(string filePath)
-    {
-        using (var Reader = new StreamReader(filePath))
-        {
-            var Serializer = new XmlSerializer(typeof(TextFile));
-            return (TextFile)Serializer.Deserialize(Reader);
-        }
-    }
-
-    // Бинарная сериализация
-    public void BinarySave(string filePath)
-    {
-        using (var Writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
-        {
-            Writer.Write(FilePath);
-            Writer.Write(Content);
-        }
-    }
-
-    // Бинарная десериализация
-    public static TextFile BinaryLoad(string filePath)
-    {
-        using (var Reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
-        {
-            var TextFile = new TextFile
+            using (var Writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
             {
-                FilePath = Reader.ReadString(),
-                Content = Reader.ReadString()
-            };
-            return TextFile;
+                Writer.Write(Content);
+            }
+        }
+        else
+        {
+            using (var StreamWriter = new StreamWriter(filePath))
+            {
+                var Serializer = new XmlSerializer(typeof(TextEditor));
+                Serializer.Serialize(StreamWriter, this);
+            }
+        }
+    }
+
+    public static TextEditor Load(string filePath, bool useBinaryDeserialization)
+    {
+        if (useBinaryDeserialization)
+        {
+            using (var Reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+            {
+                return new TextEditor { Content = Reader.ReadString() };
+            }
+        }
+        else
+        {
+            using (var StreamReader = new StreamReader(filePath))
+            {
+                var Serializer = new XmlSerializer(typeof(TextEditor));
+                return (TextEditor)Serializer.Deserialize(StreamReader);
+            }
         }
     }
 }
@@ -211,6 +205,7 @@ class Program
         var Indexer = new FileIndexer();
         Console.Write("Укажите директорию для работы: ");
         string DirectoryPath = Console.ReadLine();
+        bool useBinarySerialization = false;
 
         while (true)
         {
@@ -221,7 +216,8 @@ class Program
             Console.WriteLine("5. Поиск файлов");
             Console.WriteLine("6. Индекс директории");
             Console.WriteLine("7. Вывести файлы по индексу");
-            Console.WriteLine("8. Выход");
+            Console.WriteLine("8. Сменить тип сериализации");
+            Console.WriteLine("9. Выход");
             Console.Write("Введите номер выбора: ");
 
             string Choice = Console.ReadLine();
@@ -280,6 +276,15 @@ class Program
                     Indexer.PrintIndex();
                     break;
                 case "8":
+                    Console.WriteLine("Выберите тип сериализации:");
+                    Console.WriteLine("1. XML");
+                    Console.WriteLine("2. Binary");
+                    Console.Write("Введите номер выбора: ");
+                    string serializationChoice = Console.ReadLine();
+                    useBinarySerialization = serializationChoice == "2";
+                    Console.WriteLine("Тип сериализации был сменен.");
+                    break;
+                case "9":
                     return;
                 default:
                     Console.WriteLine("Неверный выбор.");
