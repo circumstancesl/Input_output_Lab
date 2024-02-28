@@ -47,34 +47,59 @@ public class FileSearcher
     }
 }
 
+public interface IMemento
+{
+    string GetState();
+}
+
+public class TextEditorMemento : IMemento
+{
+    private string Content;
+
+    public TextEditorMemento(string Content)
+    {
+        this.Content = Content;
+    }
+
+    public string GetState()
+    {
+        return Content;
+    }
+}
+
 public class TextEditor
 {
-    private Stack<TextFile> History = new Stack<TextFile>();
-    private TextFile CurrentFile;
+    private Stack<IMemento> History = new Stack<IMemento>();
+    private string Content;
 
     public void OpenFile(string FilePath)
     {
-        CurrentFile = new TextFile(FilePath);
-        History.Push(CurrentFile);
+        Content = File.ReadAllText(FilePath);
+        SaveState();
     }
 
     public void EditContent(string NewContent)
     {
-        History.Push(CurrentFile);
-        CurrentFile.Content = NewContent;
+        Content = NewContent;
+        SaveState();
     }
 
     public void Undo()
     {
         if (History.Count > 0)
         {
-            CurrentFile = History.Pop();
+            Content = History.Pop().GetState();
         }
     }
 
     public void SaveFile(string FilePath)
     {
-        CurrentFile.Save(FilePath);
+        File.WriteAllText(FilePath, Content);
+    }
+
+    private void SaveState()
+    {
+        History.Push(new TextEditorMemento(Content));
     }
 }
 
