@@ -13,24 +13,24 @@ public class TextFile
 
     public TextFile() { }
 
-    public TextFile(string FilePath)
+    public TextFile(string filePath)
     {
-        FilePath = FilePath;
-        Content = File.ReadAllText(FilePath);
+        this.FilePath = filePath;
+        Content = File.ReadAllText(filePath);
     }
 
-    public void Save(string FilePath)
+    public void Save(string filePath)
     {
-        using (var Writer = new StreamWriter(FilePath))
+        using (var Writer = new StreamWriter(filePath))
         {
             var Serializer = new XmlSerializer(typeof(TextFile));
             Serializer.Serialize(Writer, this);
         }
     }
 
-    public static TextFile Load(string FilePath)
+    public static TextFile Load(string filePath)
     {
-        using (var Reader = new StreamReader(FilePath))
+        using (var Reader = new StreamReader(filePath))
         {
             var Serializer = new XmlSerializer(typeof(TextFile));
             return (TextFile)Serializer.Deserialize(Reader);
@@ -40,25 +40,25 @@ public class TextFile
 
 public class FileSearcher
 {
-    public IEnumerable<string> SearchFiles(string DirectoryPath, string Keyword)
+    public IEnumerable<string> SearchFiles(string directoryPath, string keyword)
     {
-        var Files = Directory.GetFiles(DirectoryPath, "*.txt", SearchOption.AllDirectories);
-        return Files.Where(FileUser => File.ReadAllText(FileUser).Contains(Keyword));
+        var Files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
+        return Files.Where(FileUser => File.ReadAllText(FileUser).Contains(keyword));
     }
 }
 
-public interface IMemento
+public interface IOriginator
 {
     string GetState();
 }
 
-public class TextEditorMemento : IMemento
+public class TextEditorMemento : IOriginator
 {
     private string Content;
 
-    public TextEditorMemento(string Content)
+    public TextEditorMemento(string content)
     {
-        this.Content = Content;
+        this.Content = content;
     }
 
     public string GetState()
@@ -69,18 +69,23 @@ public class TextEditorMemento : IMemento
 
 public class TextEditor
 {
-    private Stack<IMemento> History = new Stack<IMemento>();
+    private Stack<IOriginator> History = new Stack<IOriginator>();
     private string Content;
 
-    public void OpenFile(string FilePath)
+    public void OpenFile(string filePath)
     {
-        Content = File.ReadAllText(FilePath);
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Файл не был найден", filePath);
+        }
+
+        Content = File.ReadAllText(filePath);
         SaveState();
     }
 
-    public void EditContent(string NewContent)
+    public void EditContent(string newContent)
     {
-        Content = NewContent;
+        Content = newContent;
         SaveState();
     }
 
@@ -92,9 +97,9 @@ public class TextEditor
         }
     }
 
-    public void SaveFile(string FilePath)
+    public void SaveFile(string filePath)
     {
-        File.WriteAllText(FilePath, Content);
+        File.WriteAllText(filePath, Content);
     }
 
     private void SaveState()
@@ -103,23 +108,24 @@ public class TextEditor
     }
 }
 
+
 public class FileIndexer
 {
     private Dictionary<string, List<string>> Index = new Dictionary<string, List<string>>();
 
-    public void IndexDirectory(string DirectoryPath, string Keyword)
+    public void IndexDirectory(string directoryPath, string keyword)
     {
-        var Files = Directory.GetFiles(DirectoryPath, "*.txt", SearchOption.AllDirectories);
+        var Files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
         foreach (var FileUser in Files)
         {
             var Content = File.ReadAllText(FileUser);
-            if (Content.Contains(Keyword))
+            if (Content.Contains(keyword))
             {
-                if (!Index.ContainsKey(Keyword))
+                if (!Index.ContainsKey(keyword))
                 {
-                    Index[Keyword] = new List<string>();
+                    Index[keyword] = new List<string>();
                 }
-                Index[Keyword].Add(FileUser);
+                Index[keyword].Add(FileUser);
             }
         }
     }
