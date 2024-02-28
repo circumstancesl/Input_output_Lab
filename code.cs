@@ -49,7 +49,7 @@ public class TextFile
         }
     }
 
-    // бинарная десериализация 
+    // Бинарная десериализация
     public static TextFile BinaryLoad(string filePath)
     {
         using (var Reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
@@ -75,62 +75,94 @@ public class FileSearcher
 
 public interface IOriginator
 {
-    string GetState();
+    object GetState();
+    void SetState(object state);
 }
 
-public class TextEditorMemento : IOriginator
+public class Memento
 {
-    private string Content;
+    private object state;
 
-    public TextEditorMemento(string content)
+    public Memento(object state)
     {
-        this.Content = content;
+        this.state = state;
     }
 
-    public string GetState()
+    public object GetState()
     {
-        return Content;
+        return state;
     }
 }
 
-public class TextEditor
+public class Caretaker
 {
-    private Stack<IOriginator> History = new Stack<IOriginator>();
-    private string Content;
+    private Stack<Memento> history = new Stack<Memento>();
 
-    public void OpenFile(string filePath)
+    public void SaveState(IOriginator originator)
     {
-        if (!File.Exists(filePath))
+        history.Push(new Memento(originator.GetState()));
+    }
+
+    public void RestoreState(IOriginator originator)
+    {
+        if (history.Count > 0)
         {
-            throw new FileNotFoundException("Файл не был найден", filePath);
+            originator.SetState(history.Pop().GetState());
         }
+    }
+}
 
+[Serializable]
+public class TextEditor : IOriginator
+{
+    public string FilePath { get; set; }
+    public string Content { get; set; }
+
+    public TextEditor() { }
+
+    public TextEditor(string filePath)
+    {
+        FilePath = filePath;
         Content = File.ReadAllText(filePath);
-        SaveState();
     }
 
     public void EditContent(string newContent)
     {
         Content = newContent;
-        SaveState();
     }
 
-    public void Undo()
+    public object GetState()
     {
-        if (History.Count > 0)
+        return new TextEditorMemento(Content);
+    }
+
+    public void SetState(object state)
+    {
+        if (state is TextEditorMemento memento)
         {
-            Content = History.Pop().GetState();
+            Content = memento.GetState();
         }
     }
 
-    public void SaveFile(string filePath)
+    public void Save(string filePath)
     {
         File.WriteAllText(filePath, Content);
     }
+}
 
-    private void SaveState()
+[Serializable]
+public class TextEditorMemento
+{
+    private string content;
+
+    public TextEditorMemento(string content)
     {
-        History.Push(new TextEditorMemento(Content));
+        this.content = content;
+    }
+
+    public string GetState()
+    {
+        return content;
     }
 }
 
@@ -173,7 +205,8 @@ class Program
 {
     static void Main(string[] args)
     {
-        var Editor = new TextEditor();
+        Caretaker Caretaker = new Caretaker();
+        TextEditor Editor = null;
         var Searcher = new FileSearcher();
         var Indexer = new FileIndexer();
         Console.Write("Укажите директорию для работы: ");
@@ -181,42 +214,52 @@ class Program
 
         while (true)
         {
-            Console.WriteLine();
             Console.WriteLine("1. Открыть файл");
             Console.WriteLine("2. Редактировать содержимое");
-            Console.WriteLine("3. Откат");
-            Console.WriteLine("4. Сохранить файл");
+            Console.WriteLine("3. Сохранить файл");
+            Console.WriteLine("4. Откат");
             Console.WriteLine("5. Поиск файлов");
             Console.WriteLine("6. Индекс директории");
             Console.WriteLine("7. Вывести файлы по индексу");
             Console.WriteLine("8. Выход");
-            Console.WriteLine("Введите номер выбора: ");
+            Console.Write("Введите номер выбора: ");
 
             string Choice = Console.ReadLine();
 
             switch (Choice)
             {
                 case "1":
-                    Console.Write("Введите путь файла: ");
+                    Console.Write("Введите путь до файла: ");
                     string FilePath = Console.ReadLine();
-                    Editor.OpenFile(FilePath);
+                    Editor = new TextEditor(FilePath);
+                    Caretaker.SaveState(Editor);
                     Console.WriteLine("Файл открыт.");
                     break;
                 case "2":
+                    if (Editor == null)
+                    {
+                        Console.WriteLine("Файл не открыт.");
+                        break;
+                    }
                     Console.WriteLine("Введите новое содержимое (введите 'exit' для завершения):");
-                    string newContent = Console.ReadLine();
-                    Editor.EditContent(newContent);
+                    string NewContent = Console.ReadLine();
+                    if (NewContent.ToLower() == "exit")
+                    {
+                        break;
+                    }
+                    Editor.EditContent(NewContent);
+                    Caretaker.SaveState(Editor);
                     Console.WriteLine("Содержимое редактировано.");
                     break;
                 case "3":
-                    Editor.Undo();
-                    Console.WriteLine("Последнее изменение отменено.");
-                    break;
-                case "4":
                     Console.Write("Введите путь для сохранения файла: ");
                     string SaveFilePath = Console.ReadLine();
-                    Editor.SaveFile(SaveFilePath);
+                    Editor.Save(SaveFilePath);
                     Console.WriteLine("Файл сохранен.");
+                    break;
+                case "4":
+                    Caretaker.RestoreState(Editor);
+                    Console.WriteLine("Последнее изменение откачено.");
                     break;
                 case "5":
                     Console.Write("Введите ключевое слово для поиска: ");
@@ -239,7 +282,7 @@ class Program
                 case "8":
                     return;
                 default:
-                    Console.WriteLine("Недопустимое значение.");
+                    Console.WriteLine("Неверный выбор.");
                     break;
             }
         }
