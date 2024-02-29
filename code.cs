@@ -23,17 +23,17 @@ public class TextFile
     {
         if (useBinarySerialization)
         {
-            using (var Writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
+            using (var writer = new BinaryWriter(File.Open(filePath, FileMode.Create)))
             {
-                Writer.Write(Content);
+                writer.Write(Content);
             }
         }
         else
         {
-            using (var StreamWriter = new StreamWriter(filePath))
+            using (var streamWriter = new StreamWriter(filePath))
             {
-                var Serializer = new XmlSerializer(typeof(TextEditor));
-                Serializer.Serialize(StreamWriter, this);
+                var serializer = new XmlSerializer(typeof(TextEditor));
+                serializer.Serialize(streamWriter, this);
             }
         }
     }
@@ -42,17 +42,17 @@ public class TextFile
     {
         if (useBinaryDeserialization)
         {
-            using (var Reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+            using (var reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
             {
-                return new TextEditor { Content = Reader.ReadString() };
+                return new TextEditor { Content = reader.ReadString() };
             }
         }
         else
         {
-            using (var StreamReader = new StreamReader(filePath))
+            using (var streamReader = new StreamReader(filePath))
             {
-                var Serializer = new XmlSerializer(typeof(TextEditor));
-                return (TextEditor)Serializer.Deserialize(StreamReader);
+                var serializer = new XmlSerializer(typeof(TextEditor));
+                return (TextEditor)serializer.Deserialize(streamReader);
             }
         }
     }
@@ -62,8 +62,8 @@ public class FileSearcher
 {
     public IEnumerable<string> SearchFiles(string directoryPath, string keyword)
     {
-        var Files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
-        return Files.Where(FileUser => File.ReadAllText(FileUser).Contains(keyword));
+        var files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
+        return files.Where(FileUser => File.ReadAllText(FileUser).Contains(keyword));
     }
 }
 
@@ -116,6 +116,11 @@ public class TextEditor : IOriginator
 
     public TextEditor(string filePath)
     {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Файл не найден", filePath);
+        }
+
         FilePath = filePath;
         Content = File.ReadAllText(filePath);
     }
@@ -163,28 +168,28 @@ public class TextEditorMemento
 
 public class FileIndexer
 {
-    private Dictionary<string, List<string>> Index = new Dictionary<string, List<string>>();
+    private Dictionary<string, List<string>> index = new Dictionary<string, List<string>>();
 
     public void IndexDirectory(string directoryPath, string keyword)
     {
-        var Files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
-        foreach (var FileUser in Files)
+        var files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
+        foreach (var FileUser in files)
         {
             var Content = File.ReadAllText(FileUser);
             if (Content.Contains(keyword))
             {
-                if (!Index.ContainsKey(keyword))
+                if (!index.ContainsKey(keyword))
                 {
-                    Index[keyword] = new List<string>();
+                    index[keyword] = new List<string>();
                 }
-                Index[keyword].Add(FileUser);
+                index[keyword].Add(FileUser);
             }
         }
     }
 
     public void PrintIndex()
     {
-        foreach (var Entry in Index)
+        foreach (var Entry in index)
         {
             Console.WriteLine($"Keyword: {Entry.Key}");
             foreach (var FileUser in Entry.Value)
@@ -199,12 +204,12 @@ class Program
 {
     static void Main(string[] args)
     {
-        Caretaker Caretaker = new Caretaker();
-        TextEditor Editor = null;
-        var Searcher = new FileSearcher();
-        var Indexer = new FileIndexer();
+        Caretaker caretake = new Caretaker();
+        TextEditor editor = null;
+        var searcher = new FileSearcher();
+        var indexer = new FileIndexer();
         Console.Write("Укажите директорию для работы: ");
-        string DirectoryPath = Console.ReadLine();
+        string directoryPath = Console.ReadLine();
         bool useBinarySerialization = false;
 
         while (true)
@@ -220,60 +225,60 @@ class Program
             Console.WriteLine("9. Выход");
             Console.Write("Введите номер выбора: ");
 
-            string Choice = Console.ReadLine();
+            string choice = Console.ReadLine();
 
-            switch (Choice)
+            switch (choice)
             {
                 case "1":
                     Console.Write("Введите путь до файла: ");
-                    string FilePath = Console.ReadLine();
-                    Editor = new TextEditor(FilePath);
-                    Caretaker.SaveState(Editor);
+                    string filePath = Console.ReadLine();
+                    editor = new TextEditor(filePath);
+                    caretake.SaveState(editor);
                     Console.WriteLine("Файл открыт.");
                     break;
                 case "2":
-                    if (Editor == null)
+                    if (editor == null)
                     {
                         Console.WriteLine("Файл не открыт.");
                         break;
                     }
                     Console.WriteLine("Введите новое содержимое (введите 'exit' для завершения):");
-                    string NewContent = Console.ReadLine();
-                    if (NewContent.ToLower() == "exit")
+                    string newContent = Console.ReadLine();
+                    if (newContent.ToLower() == "exit")
                     {
                         break;
                     }
-                    Editor.EditContent(NewContent);
-                    Caretaker.SaveState(Editor);
+                    editor.EditContent(newContent);
+                    caretake.SaveState(editor);
                     Console.WriteLine("Содержимое редактировано.");
                     break;
                 case "3":
                     Console.Write("Введите путь для сохранения файла: ");
-                    string SaveFilePath = Console.ReadLine();
-                    Editor.Save(SaveFilePath);
+                    string saveFilePath = Console.ReadLine();
+                    editor.Save(saveFilePath);
                     Console.WriteLine("Файл сохранен.");
                     break;
                 case "4":
-                    Caretaker.RestoreState(Editor);
+                    caretake.RestoreState(editor);
                     Console.WriteLine("Последнее изменение откачено.");
                     break;
                 case "5":
                     Console.Write("Введите ключевое слово для поиска: ");
-                    string SearchKeyword = Console.ReadLine();
-                    var SearchResults = Searcher.SearchFiles(DirectoryPath, SearchKeyword);
-                    foreach (var FileUser in SearchResults)
+                    string searchKeyword = Console.ReadLine();
+                    var searchResults = searcher.SearchFiles(directoryPath, searchKeyword);
+                    foreach (var fileUser in searchResults)
                     {
-                        Console.WriteLine(FileUser);
+                        Console.WriteLine(fileUser);
                     }
                     break;
                 case "6":
                     Console.Write("Введите ключевое слово для индексации: ");
-                    string IndexKeyword = Console.ReadLine();
-                    Indexer.IndexDirectory(DirectoryPath, IndexKeyword);
+                    string indexKeyword = Console.ReadLine();
+                    indexer.IndexDirectory(directoryPath, indexKeyword);
                     Console.WriteLine("Директория индексирована.");
                     break;
                 case "7":
-                    Indexer.PrintIndex();
+                    indexer.PrintIndex();
                     break;
                 case "8":
                     Console.WriteLine("Выберите тип сериализации:");
