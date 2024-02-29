@@ -173,28 +173,28 @@ public class FileIndexer
     public void IndexDirectory(string directoryPath, string keyword)
     {
         var files = Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories);
-        foreach (var FileUser in files)
+        foreach (var fileUser in files)
         {
-            var Content = File.ReadAllText(FileUser);
-            if (Content.Contains(keyword))
+            var content = File.ReadAllText(fileUser);
+            if (content.Contains(keyword))
             {
                 if (!index.ContainsKey(keyword))
                 {
                     index[keyword] = new List<string>();
                 }
-                index[keyword].Add(FileUser);
+                index[keyword].Add(fileUser);
             }
         }
     }
 
     public void PrintIndex()
     {
-        foreach (var Entry in index)
+        foreach (var entry in index)
         {
-            Console.WriteLine($"Keyword: {Entry.Key}");
-            foreach (var FileUser in Entry.Value)
+            Console.WriteLine($"Keyword: {entry.Key}");
+            foreach (var fileUser in entry.Value)
             {
-                Console.WriteLine($"  {FileUser}");
+                Console.WriteLine($"  {fileUser}");
             }
         }
     }
